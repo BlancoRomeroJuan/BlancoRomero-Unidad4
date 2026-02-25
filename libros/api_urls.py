@@ -67,5 +67,7 @@ urlpatterns = [
     # ─────────────────────────────────
     path('auth/google/redirect/', oauth_views.google_oauth_redirect, name='google_redirect'),
     path('auth/google/callback/', oauth_views.google_oauth_callback, name='google_callback'),
+    path('intensiva/', api_views.api_intensiva, name='api_intensiva'),
+    path('importar-libro/', api_views.importar_desde_google_books, name='importar_google_books'),
     path('', include(router.urls)),
 ]

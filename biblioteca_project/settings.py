@@ -21,6 +21,7 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv())
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django_extensions',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -40,6 +41,8 @@ INSTALLED_APPS = [
     'allauth.account',  # ← AGREGAR
     'allauth.socialaccount',  # ← AGREGAR
     'allauth.socialaccount.providers.google',  # ← AGREGAR
+    'channels',
+    'graphene_django',
     
     # Tu aplicación
     'libros',
@@ -55,6 +58,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'libros.middleware.SecurityMiddleware',
+    'libros.middleware.RateLimitMiddleware',
 ]
 
 ROOT_URLCONF = 'biblioteca_project.urls'
@@ -174,6 +179,18 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
+    
+    'DEFAULT_THROTTLE_CLASSES': [
+        'libros.throttles.BurstRateThrottle',
+        'libros.throttles.SustainedRateThrottle',
+    ],
+    
+    'DEFAULT_THROTTLE_RATES': {
+        'burst': '60/min',        # 60 por minuto
+        'sustained': '1000/day',  # 1000 por día
+        'anon_burst': '20/min',   # Anónimos: 20 por minuto
+        'premium': '10000/day',   # Premium: 10000 por día
+    }
 }
 
 SIMPLE_JWT = {
@@ -271,3 +288,78 @@ OAUTH2_PROVIDER = {
     'ACCESS_TOKEN_MODEL': 'oauth2_provider.AccessToken',
     'REFRESH_TOKEN_MODEL': 'oauth2_provider.RefreshToken',
 }
+
+# ASGI Application
+ASGI_APPLICATION = 'biblioteca_project.asgi.application'
+
+# Opción 2: En memoria (SOLO para desarrollo)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'
+    }
+}
+
+# GraphQL Settings
+GRAPHENE = {
+    'SCHEMA': 'libros.schema.schema',
+    'MIDDLEWARE': [
+        'graphene_django.debug.DjangoDebugMiddleware',
+    ],
+}
+
+if not DEBUG:
+    # Forzar HTTPS
+    SECURE_SSL_REDIRECT = True
+    
+    # Cookies seguras
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    
+    # Headers de seguridad
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    
+    # HSTS (HTTP Strict Transport Security)
+    SECURE_HSTS_SECONDS = 31536000  # 1 año
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    
+    # Proxy SSL headers
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    
+# Orígenes permitidos para CORS
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    # "https://blancoromerojuan.pythonanywhere.com/",
+]
+
+# Permitir credenciales
+CORS_ALLOW_CREDENTIALS = True
+
+# Headers permitidos
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# Orígenes confiables para CSRF
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    # "https://blancoromerojuan.pythonanywhere.com/",
+]
+
+# Cookie CSRF segura en producción
+if not DEBUG:
+    CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_SAMESITE = 'Strict'
